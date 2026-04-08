@@ -92,8 +92,13 @@ class SecomatAPI:
         return await self.send_command(CMD_WASH_MANUAL_ON, {"prg_wash_starttime": delay_seconds})
 
     async def stop_laundry_drying(self) -> bool:
-        """Stop laundry drying."""
+        """Stop laundry drying (cancels pending start and stops running device)."""
+        await self.send_command(CMD_WASH_MANUAL_OFF)
         return await self.send_command("OFF")
+
+    async def cancel_delayed_start(self) -> bool:
+        """Cancel a pending delayed start without turning off."""
+        return await self.send_command(CMD_WASH_MANUAL_OFF)
 
     async def start_laundry_auto(self) -> bool:
         """Start laundry drying in auto mode."""

@@ -170,16 +170,30 @@ class SecomatMoistureLockSwitch(SecomatBaseSwitch):
             _LOGGER.error("Failed to unlock target moisture: %s", err)
 
 
-class SecomatQuietHoursSwitch(SecomatBaseSwitch):
+class SecomatQuietHoursSwitch(CoordinatorEntity[SecomatCoordinator], RestoreEntity, SwitchEntity):
     """Enable/disable quiet hours enforcement."""
 
+    _attr_has_entity_name = True
     _attr_name = "Quiet Hours"
     _attr_icon = "mdi:moon-waning-crescent"
 
     def __init__(self, coordinator, entry, serial):
-        super().__init__(coordinator, entry, serial)
+        super().__init__(coordinator)
         self._attr_unique_id = f"{serial}_quiet_hours"
         self._enabled = False
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, serial)},
+            "name": f"Secomat {serial}",
+            "manufacturer": "Krüger",
+            "model": "Secomat",
+        }
+
+    async def async_added_to_hass(self) -> None:
+        """Restore previous state."""
+        await super().async_added_to_hass()
+        if last_state := await self.async_get_last_state():
+            self._enabled = last_state.state == "on"
+        self.coordinator.quiet_hours_enabled = self._enabled
 
     @property
     def is_on(self) -> bool:

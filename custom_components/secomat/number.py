@@ -35,10 +35,10 @@ class SecomatStartDelay(CoordinatorEntity[SecomatCoordinator], NumberEntity):
     _attr_name = "Start Delay"
     _attr_icon = "mdi:timer-outline"
     _attr_native_min_value = 0
-    _attr_native_max_value = 1440  # 24 hours
-    _attr_native_step = 1
+    _attr_native_max_value = 720  # 12 hours
+    _attr_native_step = 5
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
-    _attr_mode = NumberMode.BOX
+    _attr_mode = NumberMode.SLIDER
 
     def __init__(self, coordinator: SecomatCoordinator, entry: ConfigEntry, serial: str) -> None:
         """Initialize the number entity."""
@@ -61,11 +61,14 @@ class SecomatStartDelay(CoordinatorEntity[SecomatCoordinator], NumberEntity):
             return 0
 
     async def async_set_native_value(self, value: float) -> None:
-        """Set start delay and start laundry drying."""
+        """Set start delay. 0 = cancel pending start, >0 = schedule start."""
         from .api import SecoматAPIError
         delay_seconds = int(value * 60)
         try:
-            await self.coordinator.api.start_laundry_drying(delay_seconds=delay_seconds)
+            if delay_seconds == 0:
+                await self.coordinator.api.cancel_delayed_start()
+            else:
+                await self.coordinator.api.start_laundry_drying(delay_seconds=delay_seconds)
             await self.coordinator.async_request_refresh()
         except SecoматAPIError as err:
-            _LOGGER.error("Failed to start with delay: %s", err)
+            _LOGGER.error("Failed to set start delay: %s", err)
