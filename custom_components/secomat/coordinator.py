@@ -39,10 +39,10 @@ class SecomatCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._quiet_was_active: bool = False
 
     def _get_quiet_time(self, key: str, default: time) -> time:
-        """Get a quiet hours time value from the time entities."""
+        """Get a quiet hours time value from the select entities."""
         entity = self.quiet_time_entities.get(key)
-        if entity and entity.native_value:
-            return entity.native_value
+        if entity:
+            return entity.as_time()
         return default
 
     @property
