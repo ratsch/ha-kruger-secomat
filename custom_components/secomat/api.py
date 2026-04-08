@@ -93,7 +93,7 @@ class SecomatAPI:
 
     async def stop_laundry_drying(self) -> bool:
         """Stop laundry drying."""
-        return await self.send_command(CMD_WASH_MANUAL_OFF)
+        return await self.send_command("OFF")
 
     async def start_laundry_auto(self) -> bool:
         """Start laundry drying in auto mode."""

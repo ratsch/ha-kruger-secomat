@@ -7,6 +7,7 @@ from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .api import SecoматAPIError
@@ -29,6 +30,7 @@ async def async_setup_entry(
         SecomatLaundrySwitch(coordinator, entry, serial),
         SecomatRoomDryingSwitch(coordinator, entry, serial),
         SecomatMoistureLockSwitch(coordinator, entry, serial),
+        SecomatQuietHoursSwitch(coordinator, entry, serial),
     ]
 
     async_add_entities(entities)
@@ -72,8 +74,7 @@ class SecomatLaundrySwitch(SecomatBaseSwitch):
     def is_on(self) -> bool:
         """Return true if laundry drying is active."""
         state = self.coordinator.data.get("secomat_state", 0)
-        mode = self.coordinator.data.get("operating_mode", 0)
-        device_on = state > 0 and mode in (1, 2)
+        device_on = state > 0
         if self._optimistic_on is not None:
             if device_on == self._optimistic_on:
                 self._optimistic_on = None  # device caught up
@@ -167,3 +168,32 @@ class SecomatMoistureLockSwitch(SecomatBaseSwitch):
             await self.coordinator.async_request_refresh()
         except SecoматAPIError as err:
             _LOGGER.error("Failed to unlock target moisture: %s", err)
+
+
+class SecomatQuietHoursSwitch(SecomatBaseSwitch):
+    """Enable/disable quiet hours enforcement."""
+
+    _attr_name = "Quiet Hours"
+    _attr_icon = "mdi:moon-waning-crescent"
+
+    def __init__(self, coordinator, entry, serial):
+        super().__init__(coordinator, entry, serial)
+        self._attr_unique_id = f"{serial}_quiet_hours"
+        self._enabled = False
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if quiet hours are enabled."""
+        return self._enabled
+
+    async def async_turn_on(self, **kwargs) -> None:
+        """Enable quiet hours."""
+        self._enabled = True
+        self.coordinator.quiet_hours_enabled = True
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs) -> None:
+        """Disable quiet hours."""
+        self._enabled = False
+        self.coordinator.quiet_hours_enabled = False
+        self.async_write_ha_state()
