@@ -85,9 +85,12 @@ class SecomatCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Enforce quiet hours: turn off device and remember state."""
         quiet_active = self.is_quiet_hours_active
         state = data.get("secomat_state", 0)
-        mode = data.get("operating_mode", 0)
         device_on = state > 0
         room_on = data.get("room_drying_enabled", 0) == 1
+        if self.quiet_hours_enabled:
+            _LOGGER.warning("Quiet hours check: active=%s was_active=%s device_on=%s room_on=%s entities=%s",
+                            quiet_active, self._quiet_was_active, device_on, room_on,
+                            list(self.quiet_time_entities.keys()))
 
         # Entering quiet hours
         if quiet_active and not self._quiet_was_active:

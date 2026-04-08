@@ -80,7 +80,7 @@ class SecomatTargetMoistureSelect(CoordinatorEntity[SecomatCoordinator], SelectE
             _LOGGER.error("Failed to set target moisture: %s", err)
 
 
-class SecomatQuietTimeSelect(SelectEntity):
+class SecomatQuietTimeSelect(RestoreEntity, SelectEntity):
     """Secomat quiet hours time as select (HH:MM in 30-min steps)."""
 
     _attr_has_entity_name = True
@@ -93,6 +93,7 @@ class SecomatQuietTimeSelect(SelectEntity):
         self._key = key
         self._attr_name = name
         self._attr_unique_id = f"{serial}_{key}"
+        self._default = default
         self._value = default
         self._attr_device_info = {
             "identifiers": {(DOMAIN, serial)},
@@ -100,6 +101,12 @@ class SecomatQuietTimeSelect(SelectEntity):
             "manufacturer": "Krüger",
             "model": "Secomat",
         }
+
+    async def async_added_to_hass(self):
+        """Restore previous state."""
+        await super().async_added_to_hass()
+        if (last_state := await self.async_get_last_state()) and last_state.state in _TIME_OPTIONS:
+            self._value = last_state.state
 
     @property
     def current_option(self):
