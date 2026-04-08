@@ -26,8 +26,9 @@ async def async_setup_entry(
     serial = coordinator.data.get("serial_number", "unknown")
 
     entities = [
-        SecomatPowerSwitch(coordinator, entry, serial),
+        SecomatLaundrySwitch(coordinator, entry, serial),
         SecomatRoomDryingSwitch(coordinator, entry, serial),
+        SecomatMoistureLockSwitch(coordinator, entry, serial),
     ]
 
     async_add_entities(entities)
@@ -55,8 +56,8 @@ class SecomatBaseSwitch(CoordinatorEntity[SecomatCoordinator], SwitchEntity):
         }
 
 
-class SecomatPowerSwitch(SecomatBaseSwitch):
-    """Secomat power switch (laundry drying)."""
+class SecomatLaundrySwitch(SecomatBaseSwitch):
+    """Secomat laundry drying switch."""
 
     _attr_name = "Laundry Drying"
     _attr_icon = "mdi:washing-machine"
@@ -65,29 +66,41 @@ class SecomatPowerSwitch(SecomatBaseSwitch):
     def __init__(self, coordinator, entry, serial):
         super().__init__(coordinator, entry, serial)
         self._attr_unique_id = f"{serial}_laundry_drying"
+        self._optimistic_on: bool | None = None
 
     @property
     def is_on(self) -> bool:
         """Return true if laundry drying is active."""
         state = self.coordinator.data.get("secomat_state", 0)
         mode = self.coordinator.data.get("operating_mode", 0)
-        return state > 0 and mode in (1, 2)
+        device_on = state > 0 and mode in (1, 2)
+        if self._optimistic_on is not None:
+            if device_on == self._optimistic_on:
+                self._optimistic_on = None  # device caught up
+            return self._optimistic_on
+        return device_on
 
     async def async_turn_on(self, **kwargs) -> None:
-        """Turn on laundry drying."""
+        """Turn on laundry drying (start now)."""
         try:
-            await self.coordinator.api.start_laundry_drying()
+            await self.coordinator.api.start_laundry_drying(delay_seconds=0)
+            self._optimistic_on = True
+            self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
         except SecoматAPIError as err:
+            self._optimistic_on = None
             _LOGGER.error("Failed to turn on laundry drying: %s", err)
 
     async def async_turn_off(self, **kwargs) -> None:
-        """Turn off the Secomat."""
+        """Turn off laundry drying."""
         try:
-            await self.coordinator.api.turn_off()
+            await self.coordinator.api.stop_laundry_drying()
+            self._optimistic_on = False
+            self.async_write_ha_state()
             await self.coordinator.async_request_refresh()
         except SecoматAPIError as err:
-            _LOGGER.error("Failed to turn off Secomat: %s", err)
+            self._optimistic_on = None
+            _LOGGER.error("Failed to turn off laundry drying: %s", err)
 
 
 class SecomatRoomDryingSwitch(SecomatBaseSwitch):
@@ -121,3 +134,36 @@ class SecomatRoomDryingSwitch(SecomatBaseSwitch):
             await self.coordinator.async_request_refresh()
         except SecoматAPIError as err:
             _LOGGER.error("Failed to turn off room drying: %s", err)
+
+
+class SecomatMoistureLockSwitch(SecomatBaseSwitch):
+    """Secomat moisture target lock (apply to all drying processes)."""
+
+    _attr_name = "Lock Target Moisture"
+    _attr_icon = "mdi:lock"
+    _attr_entity_category = "config"
+
+    def __init__(self, coordinator, entry, serial):
+        super().__init__(coordinator, entry, serial)
+        self._attr_unique_id = f"{serial}_moisture_lock"
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if target moisture is locked."""
+        return self.coordinator.data.get("target_humidity_level_locked", 0) == 1
+
+    async def async_turn_on(self, **kwargs) -> None:
+        """Lock target moisture for all drying processes."""
+        try:
+            await self.coordinator.api.set_target_moisture_lock(True)
+            await self.coordinator.async_request_refresh()
+        except SecoматAPIError as err:
+            _LOGGER.error("Failed to lock target moisture: %s", err)
+
+    async def async_turn_off(self, **kwargs) -> None:
+        """Unlock target moisture."""
+        try:
+            await self.coordinator.api.set_target_moisture_lock(False)
+            await self.coordinator.async_request_refresh()
+        except SecoматAPIError as err:
+            _LOGGER.error("Failed to unlock target moisture: %s", err)

@@ -29,16 +29,20 @@ OPERATING_MODES = {
     3: "ventilation",
 }
 
-# Commands
-CMD_OFF = "OFF"
+# Commands (from app traffic capture)
+CMD_WASH_MANUAL_ON = "PRG_WASH_MANUAL_ON"
+CMD_WASH_MANUAL_OFF = "PRG_WASH_MANUAL_OFF"
 CMD_WASH_AUTO = "PRG_WASH_AUTO"
-CMD_WASH_TIMER = "PRG_WASH_TIMER"
 CMD_ROOM_ON = "PRG_ROOM_ON"
 CMD_ROOM_OFF = "PRG_ROOM_OFF"
+CMD_PARAMETER_CHANGE = "PARAMETER_CHANGE"
 
-# Target humidity levels
-HUMIDITY_LEVELS = {
-    0: "wet",
+# Target moisture levels (from app: Very Dry / Dry / Normal / Moist)
+TARGET_MOISTURE_LEVELS = {
+    0: "very_dry",
     1: "dry",
-    2: "extra_dry",
+    2: "normal",
+    3: "moist",
 }
+
+TARGET_MOISTURE_TO_INT = {v: k for k, v in TARGET_MOISTURE_LEVELS.items()}
