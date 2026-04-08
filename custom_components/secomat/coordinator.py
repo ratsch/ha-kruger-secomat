@@ -9,7 +9,11 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import SecomatAPI, SecoматAPIError
-from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
+from .const import (
+    DEFAULT_SCAN_INTERVAL, DOMAIN,
+    QUIET_START_WEEKDAY, QUIET_END_WEEKDAY,
+    QUIET_START_WEEKEND, QUIET_END_WEEKEND,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,11 +56,11 @@ class SecomatCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         is_weekend = weekday >= 5  # Sat, Sun
 
         if is_weekend:
-            start = self._get_quiet_time("quiet_start_weekend", time(22, 0))
-            end = self._get_quiet_time("quiet_end_weekend", time(6, 30))
+            start = self._get_quiet_time("silent_from_we", time(*QUIET_START_WEEKEND))
+            end = self._get_quiet_time("silent_to_we", time(*QUIET_END_WEEKEND))
         else:
-            start = self._get_quiet_time("quiet_start", time(22, 0))
-            end = self._get_quiet_time("quiet_end", time(6, 30))
+            start = self._get_quiet_time("silent_from_wd", time(*QUIET_START_WEEKDAY))
+            end = self._get_quiet_time("silent_to_wd", time(*QUIET_END_WEEKDAY))
 
         now_time = now.time()
 

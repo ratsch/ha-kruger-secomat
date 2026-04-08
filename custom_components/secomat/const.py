@@ -46,3 +46,9 @@ TARGET_MOISTURE_LEVELS = {
 }
 
 TARGET_MOISTURE_TO_INT = {v: k for k, v in TARGET_MOISTURE_LEVELS.items()}
+
+# Quiet hours defaults (edit here to change)
+QUIET_START_WEEKDAY = (22, 0)   # 22:00
+QUIET_END_WEEKDAY = (6, 30)     # 06:30
+QUIET_START_WEEKEND = (22, 0)   # 22:00
+QUIET_END_WEEKEND = (8, 0)      # 08:00
