@@ -6,6 +6,7 @@ import logging
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
@@ -45,7 +46,7 @@ class SecomatQuietTimeSelect(RestoreEntity, SelectEntity):
 
     _attr_has_entity_name = True
     _attr_icon = "mdi:clock-outline"
-    _attr_entity_category = "config"
+    _attr_entity_category = EntityCategory.CONFIG
     _attr_options = _TIME_OPTIONS
 
     def __init__(

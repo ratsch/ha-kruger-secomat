@@ -6,6 +6,7 @@ import logging
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -31,6 +32,7 @@ async def async_setup_entry(
         SecomatRoomDryingSwitch(coordinator, entry, serial),
         SecomatMoistureLockSwitch(coordinator, entry, serial),
         SecomatQuietHoursSwitch(coordinator, entry, serial),
+        SecomatAutoRoomAfterLaundrySwitch(coordinator, entry, serial),
     ]
 
     async_add_entities(entities)
@@ -142,7 +144,7 @@ class SecomatMoistureLockSwitch(SecomatBaseSwitch):
 
     _attr_name = "Lock Target Moisture"
     _attr_icon = "mdi:lock"
-    _attr_entity_category = "config"
+    _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, coordinator, entry, serial):
         super().__init__(coordinator, entry, serial)
@@ -210,4 +212,43 @@ class SecomatQuietHoursSwitch(CoordinatorEntity[SecomatCoordinator], RestoreEnti
         """Disable quiet hours."""
         self._enabled = False
         self.coordinator.quiet_hours_enabled = False
+        self.async_write_ha_state()
+
+
+class SecomatAutoRoomAfterLaundrySwitch(CoordinatorEntity[SecomatCoordinator], RestoreEntity, SwitchEntity):
+    """Auto-start room drying after a laundry cycle finishes."""
+
+    _attr_has_entity_name = True
+    _attr_name = "Auto Room Drying After Laundry"
+    _attr_icon = "mdi:home-thermometer-outline"
+
+    def __init__(self, coordinator, entry, serial):
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{serial}_auto_room_after_laundry"
+        self._enabled = False
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, serial)},
+            "name": f"Secomat {serial}",
+            "manufacturer": "Krüger",
+            "model": "Secomat",
+        }
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if last_state := await self.async_get_last_state():
+            self._enabled = last_state.state == "on"
+        self.coordinator.auto_room_after_laundry = self._enabled
+
+    @property
+    def is_on(self) -> bool:
+        return self._enabled
+
+    async def async_turn_on(self, **kwargs) -> None:
+        self._enabled = True
+        self.coordinator.auto_room_after_laundry = True
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs) -> None:
+        self._enabled = False
+        self.coordinator.auto_room_after_laundry = False
         self.async_write_ha_state()

@@ -8,6 +8,7 @@ from datetime import time
 from homeassistant.components.text import TextEntity, TextMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
@@ -46,7 +47,7 @@ class SecomatQuietTimeText(RestoreEntity, TextEntity):
 
     _attr_has_entity_name = True
     _attr_icon = "mdi:clock-outline"
-    _attr_entity_category = "config"
+    _attr_entity_category = EntityCategory.CONFIG
     _attr_mode = TextMode.TEXT
     _attr_pattern = r"\d{1,2}:\d{2}"
     _attr_native_min = 4
